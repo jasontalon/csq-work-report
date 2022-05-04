@@ -1,8 +1,10 @@
 import argparse
+import subprocess
 import csv
 from datetime import datetime
 import os
 from os.path import isfile, join
+from time import sleep
 
 
 def execute_command(cmd) -> str:
@@ -39,6 +41,15 @@ def get_args():
 
     return parser.parse_args()
 
+def get_branches(dir):
+    execute_command(f'cd {dir} && git --no-pager branch >> .branches')
+    sleep(1)
+    branches = []
+    fullpath = os.path.join(dir, '.branches')
+    with open(fullpath, 'r', encoding='UTF8') as file:
+        branches = file.read().split('\n')
+    os.remove(fullpath)
+    return branches
 
 def create_report(args, target_dir):
     cmd = f'cd {target_dir}'
@@ -47,7 +58,9 @@ def create_report(args, target_dir):
 
     dir_name = dir_name[dir_name.rfind('/') + 1:].strip()
 
-    log = f'git log --since="{args.since} days" --no-merges --author="{args.author}"'
+    branches = " ".join([b.strip() for b in get_branches(target_dir)])
+
+    log = f'git log {branches} --since="{args.since} days" --no-merges --author="{args.author}"'
 
     pretty = f'--pretty="format:%as\t{dir_name}\t%h\t%ae\t%s"'
 
